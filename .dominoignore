@@ -30,6 +30,6 @@ octave-core
 # Mac OS X system files
 .DS_Store
 
-*.jpg
 */Thumbs.db
 
+data_old/
