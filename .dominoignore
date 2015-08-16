@@ -33,3 +33,4 @@ octave-core
 */Thumbs.db
 
 data_old/
+.vagrant/

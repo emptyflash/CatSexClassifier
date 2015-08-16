@@ -1,5 +1,9 @@
 *.pyc
 *.jpg
 *.db
+*.log
+Vagrantfile
+
 results/
 data/
+.vagrant/

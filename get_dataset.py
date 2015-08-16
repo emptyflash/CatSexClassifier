@@ -10,7 +10,7 @@ randomized_zip_codes.sort()
 LOCATIONS_TO_TRY = [zip_code for _, zip_code in randomized_zip_codes]
 PETFINDER_API_KEY = "6147b7f8725e76cb84f2da7694e3aa5e"
 URL_FORMAT = "http://api.petfinder.com/pet.find?key={key}&location={location}&count={count}&offset={offset}&animal=cat&format=json"
-RECORDS_PER_REQUEST = 200
+RECORDS_PER_REQUEST = 500
 IMAGES_TO_RETRIEVE = 30000
 
 
