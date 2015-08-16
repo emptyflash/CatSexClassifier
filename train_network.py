@@ -1,13 +1,13 @@
+import domino_copy_theanorc
 from transform_data import (get_input_images_and_ouput_labels,
                             get_number_of_image_files_in_path)
-from domino_copy_theanorc import setup_theano
 
 import sys
 import random
 import time
 from itertools import izip
 
-from numpy import array, int8, float32
+from numpy import array, vstack, int8, float32
 
 import theano
 import theano.tensor as T
@@ -23,6 +23,13 @@ def generate_minibatches(generator, batch_size=50):
     # batch.extend([(X[:, :, ::-1], Y) for (X, Y) in batch])
     random.shuffle(batch)
     return batch
+
+
+def get_input_and_output_from_batch(batch):
+    # The slice here is to make sure we only have 3 channels
+    X = array([X[:3, :, :] for X, _ in batch], dtype=theano.config.floatX)
+    Y = vstack([Y for _, Y in batch]).astype(int8)
+    return X, Y
 
 
 def build_neural_network(input_var, input_shape):
@@ -63,18 +70,14 @@ def write_model_data(model, filename):
 
 
 def main(num_epochs=500):
-    setup_theano()
-
     input_var = T.tensor4('inputs')
-    target_var = T.ivector('targets')
+    target_var = T.bmatrix('targets')
 
     network = build_neural_network(input_var, (50, 3, 200, 200))
 
     prediction = lasagne.layers.get_output(network)
-    loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
+    loss = lasagne.objectives.binary_crossentropy(prediction, target_var)
     loss = loss.mean()
-
-    print lasagne.layers.get_output_shape(network)
 
     params = lasagne.layers.get_all_params(network, trainable=True)
     updates = lasagne.updates.nesterov_momentum(loss,
@@ -122,8 +125,7 @@ def main(num_epochs=500):
                 batch = generate_minibatches(train_generator)
             except StopIteration:
                 break
-            X = array([X for X, _ in batch], dtype=theano.config.floatX)
-            Y = array([Y for _, Y in batch], dtype=int8).reshape(-1, 1)
+            X, Y = get_input_and_output_from_batch(batch)
             train_error += train_function(X, Y)
             train_batches += 1
 
@@ -136,8 +138,7 @@ def main(num_epochs=500):
                 batch = generate_minibatches(validation_generator)
             except StopIteration:
                 break
-            X = array([X for X, _ in batch], dtype=theano.config.floatX)
-            Y = array([Y for _, Y in batch], dtype=int8).reshape(-1, 1)
+            X, Y = get_input_and_output_from_batch(batch)
             err, acc = validation_function(X, Y)
             val_error += err
             val_accuracy += acc
@@ -160,8 +161,7 @@ def main(num_epochs=500):
             batch = generate_minibatches(test_generator)
         except StopIteration:
             break
-        X = array([X for X, _ in batch], dtype=theano.config.floatX)
-        Y = array([Y for _, Y in batch], dtype=int8).reshape(-1, 1)
+        X, Y = get_input_and_output_from_batch(batch)
         err, acc = validation_function(inputs, targets)
         test_error += err
         test_accuracy += acc

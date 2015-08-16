@@ -1,10 +1,9 @@
+import domino_copy_theanorc
 from theano import function, config, shared, sandbox
 import theano.tensor as T
 import numpy
 import time
-from domino_copy_theanorc import setup_theano
 
-setup_theano()
 
 vlen = 10 * 30 * 768  # 10 x #cores x # threads per core
 iters = 1000
@@ -17,6 +16,7 @@ t0 = time.time()
 for i in xrange(iters):
     r = f()
 t1 = time.time()
+print 'Using tensor type ', config.floatX
 print 'Looping %d times took' % iters, t1 - t0, 'seconds'
 print 'Result is', r
 if numpy.any([isinstance(x.op, T.Elemwise) for x in f.maker.fgraph.toposort()]):
