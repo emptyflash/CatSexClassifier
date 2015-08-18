@@ -12,7 +12,7 @@ def get_images_as_numpy_arrays(image_files):
         try:
             yield array(Image.open(image))
         except IOError as ex:
-            print "IOError reading image: " + str(ex)
+            print "IOError reading image: " + str(ex) + ": " + image
             continue
 
 
@@ -36,8 +36,8 @@ def get_all_image_files_from_path(path):
 def resize_images_to_uniform_size_on_one_axis(images):
     return (zoom(image,
                  (1,
-                  200.0 / max(image.shape[1], image.shape[2]),
-                  200.0 / max(image.shape[1], image.shape[2])),
+                  96.0 / max(image.shape[1], image.shape[2]),
+                  96.0 / max(image.shape[1], image.shape[2])),
                  order=0)
             for image in images)
 
@@ -45,10 +45,10 @@ def resize_images_to_uniform_size_on_one_axis(images):
 def pad_images_to_be_unifrom_size(images):
     return (pad(image,
                 ((0, 0),
-                 (ceil((200 - image.shape[1]) / 2.0),
-                  floor((200 - image.shape[1]) / 2.0)),
-                 (ceil((200 - image.shape[2]) / 2.0),
-                  floor((200 - image.shape[2]) / 2.0))),
+                 (ceil((96 - image.shape[1]) / 2.0),
+                  floor((96 - image.shape[1]) / 2.0)),
+                 (ceil((96 - image.shape[2]) / 2.0),
+                  floor((96 - image.shape[2]) / 2.0))),
                 mode="edge") for image in images)
 
 
@@ -58,7 +58,7 @@ def transpose_images_to_channel_row_column(images):
         try:
             yield image.transpose(2, 0, 1)
         except ValueError as ex:
-            print "ValueError transposing image: " + str(ex)
+            print "ValueError transposing image: " + str(ex) + ": " + str(image.shape)
             continue
 
 
