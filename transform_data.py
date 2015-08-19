@@ -2,6 +2,7 @@ import os
 from math import ceil, floor
 from numpy import pad, array, float32
 from PIL import Image
+from scipy.misc import imsave
 from scipy.ndimage import zoom
 from itertools import izip
 
@@ -42,7 +43,7 @@ def resize_images_to_uniform_size_on_one_axis(images):
             for image in images)
 
 
-def pad_images_to_be_unifrom_size(images):
+def pad_images_to_be_uniformm_size(images):
     return (pad(image,
                 ((0, 0),
                  (ceil((96 - image.shape[1]) / 2.0),
@@ -58,7 +59,6 @@ def transpose_images_to_channel_row_column(images):
         try:
             yield image.transpose(2, 0, 1)
         except ValueError as ex:
-            print "ValueError transposing image: " + str(ex) + ": " + str(image.shape)
             continue
 
 
@@ -66,13 +66,20 @@ def transform_image_values_to_proper_range(images):
     return ((image.astype(float32) / 255.0) for image in images)
 
 
+def save_test_image(path):
+    image, label = next(get_input_images_and_ouput_labels(path))
+    imsave('testimage' + str(label) + '.jpg', image)
+
+
 def get_input_images_and_ouput_labels(path_to_images="data/"):
     labelFiles = get_all_image_files_from_path(path_to_images)
     imageFiles = get_all_image_files_from_path(path_to_images)
     labels = get_sex_labels_as_binary(labelFiles)
-    image_arrays = transform_image_values_to_proper_range(
-        pad_images_to_be_unifrom_size(
+    images = transform_image_values_to_proper_range(
+        pad_images_to_be_uniformm_size(
             resize_images_to_uniform_size_on_one_axis(
                 transpose_images_to_channel_row_column(
                     get_images_as_numpy_arrays(imageFiles)))))
-    return izip(image_arrays, labels)
+    return izip(images, labels)
+
+# save_test_image("data/")

@@ -5,7 +5,7 @@ from transform_data import (get_input_images_and_ouput_labels,
 import sys
 import random
 import time
-from itertools import izip
+from itertools import izip, cycle
 
 import numpy as np
 
@@ -18,9 +18,8 @@ import os
 import lasagne
 
 
-def generate_minibatches(generator, batch_size=50):
-    batch = [(X, Y) for _, (X, Y) in izip(xrange(batch_size / 2), generator)]
-    np.random.shuffle(batch)
+def generate_minibatches(generator, batch_size):
+    batch = [(X, Y) for _, (X, Y) in izip(xrange(batch_size), generator)]
     return batch
 
 
@@ -106,6 +105,11 @@ def main(num_epochs=1000, batch_size=128):
 
     network = build_neural_network(input_var, (batch_size, 3, 96, 96))
 
+    # try:
+    #     read_model_data(network, "models/model.pkl")
+    # except IOError:
+    #     pass
+
     prediction = lasagne.layers.get_output(network)
     loss = lasagne.objectives.binary_crossentropy(prediction, target_var)
     loss = loss.mean()
@@ -138,18 +142,13 @@ def main(num_epochs=1000, batch_size=128):
 
     number_of_image_files = get_number_of_image_files_in_path()
 
-    # # Just load everything into memory, we have enough space
-    # data = list(get_input_images_and_ouput_labels())
-    # train_data = data[:int(len(data) * 0.6)]
-    # validation_data = data[int(len(data) * 0.6): int(len(data) * 0.2)]
-    # test_data = data[int(len(data) * 0.8): int(len(data) * 0.2)]
-
-    print "Number of files found: " + number_of_image_files
+    print "Number of files found: ", number_of_image_files
 
     print("Starting training...")
 
+    data_generator = cycle(get_input_images_and_ouput_labels())
+
     for epoch in range(num_epochs):
-        data_generator = get_input_images_and_ouput_labels()
         train_generator = get_percentage_of_generator(data_generator,
                                                       number_of_image_files,
                                                       batch_size,
@@ -169,10 +168,10 @@ def main(num_epochs=1000, batch_size=128):
         start_time = time.time()
         while True:
             try:
-                batch = generate_minibatches(train_generator)
+                batch = generate_minibatches(train_generator, batch_size)
             except StopIteration:
                 break
-            if len(batch) < 50:
+            if len(batch) != batch_size:
                 break
             X, Y = get_input_and_output_from_batch(batch)
             train_error += train_function(X, Y)
@@ -187,10 +186,10 @@ def main(num_epochs=1000, batch_size=128):
         val_batches = 0
         while True:
             try:
-                batch = generate_minibatches(validation_generator)
+                batch = generate_minibatches(validation_generator, batch_size)
             except StopIteration:
                 break
-            if len(batch) != 50:
+            if len(batch) != batch_size:
                 break
             X, Y = get_input_and_output_from_batch(batch)
             err, acc = validation_function(X, Y)
@@ -206,7 +205,8 @@ def main(num_epochs=1000, batch_size=128):
         print("  validation accuracy:\t\t{:.2f} %".format(
             val_accuracy / val_batches * 100))
 
-        print("  train / valid:\t\t{:.6f} %".format(train_error / val_error))
+        print("  train / valid:\t\t{:.6f}".format(
+            (train_error / train_batches) / (val_error / val_batches)))
 
         new_learn_rate = np.float32(learning_rate_steps[epoch])
         new_momentum = np.float32(momentum_steps[epoch])
@@ -215,16 +215,18 @@ def main(num_epochs=1000, batch_size=128):
         learning_rate.set_value(new_learn_rate)
         momentum.set_value(new_momentum)
 
+        write_model_data(network, "models/model.pkl")
+
     # After training, we compute and print the test error:
     test_error = 0
     test_accuracy = 0
     test_batches = 0
     while True:
         try:
-            batch = generate_minibatches(test_generator)
+            batch = generate_minibatches(test_generator, batch_size)
         except StopIteration:
             break
-        if len(batch) != 50:
+        if len(batch) != batch_size:
             break
         X, Y = get_input_and_output_from_batch(batch)
         err, acc = validation_function(inputs, targets)
@@ -235,8 +237,6 @@ def main(num_epochs=1000, batch_size=128):
     print("  test loss:\t\t\t{:.6f}".format(test_error / test_batches))
     print("  test accuracy:\t\t{:.2f} %".format(
         test_accuracy / test_batches * 100))
-
-    write_model_data(network, "models/model.pkl")
 
 if __name__ == '__main__':
     kwargs = {}
