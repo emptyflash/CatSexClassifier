@@ -1,7 +1,6 @@
 [global]
 device = gpu
 floatX = float32
-assert_no_cpu_op = warn
 
 [nvcc]
 fastmath = True
