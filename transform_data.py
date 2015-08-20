@@ -81,5 +81,3 @@ def get_input_images_and_ouput_labels(path_to_images="data/"):
                 transpose_images_to_channel_row_column(
                     get_images_as_numpy_arrays(imageFiles)))))
     return izip(images, labels)
-
-# save_test_image("data/")

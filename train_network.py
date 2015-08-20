@@ -52,10 +52,42 @@ def build_neural_network(input_var, input_shape):
                                          filter_size=(3, 3),
                                          nonlinearity=lasagne.nonlinearities.rectify,
                                          W=lasagne.init.GlorotUniform())
+    network = lasagne.layers.Conv2DLayer(network,
+                                         num_filters=32,
+                                         filter_size=(3, 3),
+                                         nonlinearity=lasagne.nonlinearities.rectify,
+                                         W=lasagne.init.GlorotUniform())
+    network = lasagne.layers.Conv2DLayer(network,
+                                         num_filters=32,
+                                         filter_size=(3, 3),
+                                         nonlinearity=lasagne.nonlinearities.rectify,
+                                         W=lasagne.init.GlorotUniform())
+    network = lasagne.layers.Conv2DLayer(network,
+                                         num_filters=32,
+                                         filter_size=(3, 3),
+                                         nonlinearity=lasagne.nonlinearities.rectify,
+                                         W=lasagne.init.GlorotUniform())
+    network = lasagne.layers.Conv2DLayer(network,
+                                         num_filters=32,
+                                         filter_size=(3, 3),
+                                         nonlinearity=lasagne.nonlinearities.rectify,
+                                         W=lasagne.init.GlorotUniform())
     network = lasagne.layers.MaxPool2DLayer(network,
                                             pool_size=(2, 2))
     network = lasagne.layers.dropout(network, p=0.1)
 
+    network = lasagne.layers.Conv2DLayer(network,
+                                         num_filters=64,
+                                         filter_size=(2, 2),
+                                         nonlinearity=lasagne.nonlinearities.rectify)
+    network = lasagne.layers.Conv2DLayer(network,
+                                         num_filters=64,
+                                         filter_size=(2, 2),
+                                         nonlinearity=lasagne.nonlinearities.rectify)
+    network = lasagne.layers.Conv2DLayer(network,
+                                         num_filters=64,
+                                         filter_size=(2, 2),
+                                         nonlinearity=lasagne.nonlinearities.rectify)
     network = lasagne.layers.Conv2DLayer(network,
                                          num_filters=64,
                                          filter_size=(2, 2),
@@ -67,14 +99,27 @@ def build_neural_network(input_var, input_shape):
                                          num_filters=128,
                                          filter_size=(2, 2),
                                          nonlinearity=lasagne.nonlinearities.rectify)
+    network = lasagne.layers.Conv2DLayer(network,
+                                         num_filters=128,
+                                         filter_size=(2, 2),
+                                         nonlinearity=lasagne.nonlinearities.rectify)
+    network = lasagne.layers.Conv2DLayer(network,
+                                         num_filters=128,
+                                         filter_size=(2, 2),
+                                         nonlinearity=lasagne.nonlinearities.rectify)
     network = lasagne.layers.MaxPool2DLayer(network, pool_size=(2, 2))
-    network = lasagne.layers.dropout(network, p=0.3)
 
+    network = lasagne.layers.dropout(network, p=0.3)
     network = lasagne.layers.DenseLayer(network,
                                         num_units=256,
                                         nonlinearity=lasagne.nonlinearities.rectify)
-    network = lasagne.layers.dropout(network, p=0.5)
 
+    network = lasagne.layers.dropout(network, p=0.5)
+    network = lasagne.layers.DenseLayer(network,
+                                        num_units=512,
+                                        nonlinearity=lasagne.nonlinearities.rectify)
+
+    network = lasagne.layers.dropout(network, p=0.5)
     network = lasagne.layers.DenseLayer(network,
                                         num_units=512,
                                         nonlinearity=lasagne.nonlinearities.rectify)
@@ -104,11 +149,6 @@ def main(num_epochs=1000, batch_size=128):
     target_var = T.bmatrix('targets')
 
     network = build_neural_network(input_var, (batch_size, 3, 96, 96))
-
-    # try:
-    #     read_model_data(network, "models/model.pkl")
-    # except IOError:
-    #     pass
 
     prediction = lasagne.layers.get_output(network)
     loss = lasagne.objectives.binary_crossentropy(prediction, target_var)
@@ -146,8 +186,8 @@ def main(num_epochs=1000, batch_size=128):
 
     print("Starting training...")
 
+    # Move this to the epoch loop and remove the cycle for lower memory computers
     data_generator = cycle(get_input_images_and_ouput_labels())
-
     for epoch in range(num_epochs):
         train_generator = get_percentage_of_generator(data_generator,
                                                       number_of_image_files,
