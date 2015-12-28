@@ -11,7 +11,7 @@ setup(
     install_requires = [str(ir.req) for ir in install_reqs],
     package_data = {
     '': ['*.dat'],
-    }
+    },
 
     # metadata for upload to PyPI
     author = "EmptyFlash",
