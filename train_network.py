@@ -1,4 +1,3 @@
-import domino_copy_theanorc
 from transform_data import (get_input_images_and_ouput_labels,
                             get_number_of_image_files_in_path)
 
