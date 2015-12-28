@@ -86,7 +86,7 @@ def build_neural_network(input_var, input_shape):
     network = lasagne.layers.DenseLayer(
         lasagne.layers.dropout(network, p=0.5),
         num_units=1,
-        nonlinearity=lasagne.nonlinearities.sigmoid)
+        nonlinearity=lasagne.nonlinearities.rectify)
 
     return network
 
@@ -147,6 +147,7 @@ def main(num_epochs=1000, batch_size=128):
 
     # Move this to the epoch loop and remove the cycle for lower memory computers
     data_generator = cycle(get_input_images_and_ouput_labels())
+    best_accuracy = 0
     for epoch in range(num_epochs):
         train_generator = get_percentage_of_generator(data_generator,
                                                       number_of_image_files,
@@ -214,7 +215,10 @@ def main(num_epochs=1000, batch_size=128):
         learning_rate.set_value(new_learn_rate)
         momentum.set_value(new_momentum)
 
-        write_model_data(network, "models/model.pkl")
+        if val_accuracy > best_accuracy:
+            print "Accuracy better than previous best, saving model"
+            write_model_data(network, "models/model%s.pkl" % val_accuracy)
+            best_accuracy = val_accuracy
 
     # After training, we compute and print the test error:
     test_error = 0
@@ -228,7 +232,7 @@ def main(num_epochs=1000, batch_size=128):
         if len(batch) != batch_size:
             break
         X, Y = get_input_and_output_from_batch(batch)
-        err, acc = validation_function(inputs, targets)
+        err, acc = validation_function(X, Y)
         test_error += err
         test_accuracy += acc
         test_batches += 1
