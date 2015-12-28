@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 from pip.req import parse_requirements
 
-install_reqs = parse_requirements('requirments.txt')
+install_reqs = parse_requirements('requirments.txt', session=pip.download.PipSession())
 
 setup(
     name = "CatSexClassifier",
