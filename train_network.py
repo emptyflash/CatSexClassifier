@@ -18,7 +18,7 @@ import os
 import lasagne
 from lasagne.layers import InputLayer, DenseLayer, DropoutLayer
 from lasagne.layers import NonlinearityLayer
-from lasagne.layers.dnn import Conv2DDNNLayer as ConvLayer
+from lasagne.layers import Conv2DLayer as ConvLayer
 from lasagne.layers import MaxPool2DLayer as PoolLayer
 from lasagne.layers import LocalResponseNormalization2DLayer as NormLayer
 from lasagne.nonlinearities import sigmoid
