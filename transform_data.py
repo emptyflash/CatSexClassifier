@@ -5,6 +5,7 @@ from PIL import Image
 from scipy.misc import imsave
 from scipy.ndimage import zoom
 from itertools import izip
+from config import IMAGE_SIZE
 
 
 def get_images_as_numpy_arrays(image_files):
@@ -37,8 +38,8 @@ def get_all_image_files_from_path(path):
 def resize_images_to_uniform_size_on_one_axis(images):
     return (zoom(image,
                  (1,
-                  96.0 / max(image.shape[1], image.shape[2]),
-                  96.0 / max(image.shape[1], image.shape[2])),
+                  float(IMAGE_SIZE) / max(image.shape[1], image.shape[2]),
+                  float(IMAGE_SIZE) / max(image.shape[1], image.shape[2])),
                  order=0)
             for image in images)
 
@@ -46,10 +47,10 @@ def resize_images_to_uniform_size_on_one_axis(images):
 def pad_images_to_be_uniformm_size(images):
     return (pad(image,
                 ((0, 0),
-                 (int(ceil((96 - image.shape[1]) / 2.0)),
-                  int(floor((96 - image.shape[1]) / 2.0))),
-                 (int(ceil((96 - image.shape[2]) / 2.0)),
-                  int(floor((96 - image.shape[2]) / 2.0)))),
+                 (int(ceil((IMAGE_SIZE - image.shape[1]) / 2.0)),
+                  int(floor((IMAGE_SIZE - image.shape[1]) / 2.0))),
+                 (int(ceil((IMAGE_SIZE - image.shape[2]) / 2.0)),
+                  int(floor((IMAGE_SIZE - image.shape[2]) / 2.0)))),
                 mode="edge") for image in images)
 
 

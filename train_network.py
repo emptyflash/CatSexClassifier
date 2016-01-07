@@ -1,5 +1,6 @@
 from transform_data import (get_input_images_and_ouput_labels,
                             get_number_of_image_files_in_path)
+from config import *
 
 import sys
 import random
@@ -15,6 +16,12 @@ import cPickle as pickle
 import os
 
 import lasagne
+from lasagne.layers import InputLayer, DenseLayer, DropoutLayer
+from lasagne.layers import NonlinearityLayer
+from lasagne.layers.dnn import Conv2DDNNLayer as ConvLayer
+from lasagne.layers import MaxPool2DLayer as PoolLayer
+from lasagne.layers import LocalResponseNormalization2DLayer as NormLayer
+from lasagne.nonlinearities import sigmoid
 
 
 def generate_minibatches(generator, batch_size):
@@ -43,51 +50,47 @@ def get_percentage_of_generator(generator, number_of_items, batch_size, percent)
 
 
 def build_neural_network(input_var, input_shape):
-    network = lasagne.layers.InputLayer(shape=input_shape,
-                                        input_var=input_var)
+    net = {}
 
-    network = lasagne.layers.Conv2DLayer(network,
-                                         num_filters=32,
-                                         filter_size=(3, 3),
-                                         nonlinearity=lasagne.nonlinearities.rectify,
-                                         W=lasagne.init.GlorotUniform())
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(2, 2))
-    network = lasagne.layers.dropout(network, p=0.1)
+    net['input'] = InputLayer(input_shape, input_var)
+    net['conv1'] = ConvLayer(net['input'],
+                             num_filters=96,
+                             filter_size=7,
+                             stride=2)
+    net['norm1'] = NormLayer(net['conv1'], alpha=0.0001)
+    net['pool1'] = PoolLayer(net['norm1'],
+                             pool_size=3,
+                             stride=3,
+                             ignore_border=False)
+    net['conv2'] = ConvLayer(net['pool1'], num_filters=256, filter_size=5)
+    net['pool2'] = PoolLayer(net['conv2'],
+                             pool_size=2,
+                             stride=2,
+                             ignore_border=False)
+    net['conv3'] = ConvLayer(net['pool2'],
+                             num_filters=512,
+                             filter_size=3,
+                             pad=1)
+    net['conv4'] = ConvLayer(net['conv3'],
+                             num_filters=512,
+                             filter_size=3,
+                             pad=1)
+    net['conv5'] = ConvLayer(net['conv4'],
+                             num_filters=512,
+                             filter_size=3,
+                             pad=1)
+    net['pool5'] = PoolLayer(net['conv5'],
+                             pool_size=3,
+                             stride=3,
+                             ignore_border=False)
+    net['fc6'] = DenseLayer(net['pool5'], num_units=4096)
+    net['drop6'] = DropoutLayer(net['fc6'], p=0.5)
+    net['fc7'] = DenseLayer(net['drop6'], num_units=4096)
+    net['drop7'] = DropoutLayer(net['fc7'], p=0.5)
+    net['fc8'] = DenseLayer(net['drop7'], num_units=1, nonlinearity=None)
+    net['prob'] = NonlinearityLayer(net['fc8'], sigmoid)
 
-    network = lasagne.layers.Conv2DLayer(network,
-                                         num_filters=64,
-                                         filter_size=(2, 2),
-                                         nonlinearity=lasagne.nonlinearities.rectify)
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(2, 2))
-    network = lasagne.layers.dropout(network, p=0.2)
-
-    network = lasagne.layers.Conv2DLayer(network,
-                                         num_filters=128,
-                                         filter_size=(2, 2),
-                                         nonlinearity=lasagne.nonlinearities.rectify)
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(2, 2))
-
-    network = lasagne.layers.dropout(network, p=0.3)
-    network = lasagne.layers.DenseLayer(network,
-                                        num_units=256,
-                                        nonlinearity=lasagne.nonlinearities.rectify)
-
-    network = lasagne.layers.dropout(network, p=0.5)
-    network = lasagne.layers.DenseLayer(network,
-                                        num_units=512,
-                                        nonlinearity=lasagne.nonlinearities.rectify)
-
-    network = lasagne.layers.dropout(network, p=0.5)
-    network = lasagne.layers.DenseLayer(network,
-                                        num_units=512,
-                                        nonlinearity=lasagne.nonlinearities.rectify)
-
-    network = lasagne.layers.DenseLayer(
-        lasagne.layers.dropout(network, p=0.5),
-        num_units=1,
-        nonlinearity=lasagne.nonlinearities.rectify)
-
-    return network
+    return net
 
 
 def read_model_data(model, filename):
@@ -102,33 +105,26 @@ def write_model_data(model, filename):
         pickle.dump(data, f)
 
 
-def main(num_epochs=1000, batch_size=128):
+def main(num_epochs=DEFAULT_NUM_EPOCHS, batch_size=DEFAULT_BATCH_SIZE):
     input_var = T.tensor4('inputs')
     target_var = T.bmatrix('targets')
 
-    network = build_neural_network(input_var, (batch_size, 3, 96, 96))
+    network = build_neural_network(input_var, (batch_size, 3, IMAGE_SIZE, IMAGE_SIZE))['prob']
 
     prediction = lasagne.layers.get_output(network)
     loss = lasagne.objectives.binary_crossentropy(prediction, target_var)
     loss = loss.mean()
 
-    learning_rate_steps = np.linspace(0.03, 0.0001, num_epochs)
-    momentum_steps = np.linspace(0.9, 0.999, num_epochs)
-    learning_rate = theano.shared(np.float32(learning_rate_steps[0]))
-    momentum = theano.shared(np.float32(momentum_steps[0]))
-
     params = lasagne.layers.get_all_params(network, trainable=True)
-    updates = lasagne.updates.nesterov_momentum(loss,
-                                                params,
-                                                learning_rate=learning_rate,
-                                                momentum=momentum)
+    updates = lasagne.updates.adadelta(loss,
+                                       params)
 
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
     test_loss = lasagne.objectives.binary_crossentropy(test_prediction,
                                                        target_var)
     test_loss = test_loss.mean()
 
-    test_accuracy = T.mean(T.eq(test_prediction, target_var),
+    test_accuracy = T.mean(T.eq(T.gt(test_prediction, 0.5), T.eq(target_var, 1.0)),
                            dtype=theano.config.floatX)
 
     train_function = theano.function([input_var, target_var],
@@ -207,16 +203,9 @@ def main(num_epochs=1000, batch_size=128):
         print("  train / valid:\t\t{:.6f}".format(
             (train_error / train_batches) / (val_error / val_batches)))
 
-        new_learn_rate = np.float32(learning_rate_steps[epoch])
-        new_momentum = np.float32(momentum_steps[epoch])
-        print "Updating learning rate to {:.3f} and momentum to {:.3f}".format(
-            new_learn_rate, new_momentum)
-        learning_rate.set_value(new_learn_rate)
-        momentum.set_value(new_momentum)
-
         if val_accuracy > best_accuracy:
             print "Accuracy better than previous best, saving model"
-            write_model_data(network, "models/model%s.pkl" % val_accuracy)
+            write_model_data(network, "models/model%s.pkl" % int(val_accuracy / val_batches * 100))
             best_accuracy = val_accuracy
 
     # After training, we compute and print the test error:
